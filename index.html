@@ -1,243 +1,218 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Daure Express | Coleta e Entrega</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Daure Express | Sistema de Entregas</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: #fff;
-    }
-    .container {
-      max-width: 420px;
-      margin: auto;
-      padding: 20px;
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-    .logo img {
-      max-width: 180px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .sub {
-      text-align: center;
-      font-size: 14px;
-      opacity: 0.85;
-      margin-bottom: 20px;
-    }
-    label {
-      font-size: 14px;
-      margin-top: 10px;
-      display: block;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: none;
-      margin-top: 5px;
-      font-size: 15px;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 15px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn-calcular {
-      background: #111;
-      color: #fff;
-    }
-    .btn-confirmar {
-      background: #25D366;
-      color: #000;
-    }
-    #resultado {
-      margin-top: 15px;
-      font-size: 17px;
-      font-weight: bold;
-      text-align: center;
-      color: #ffd700;
-    }
-    .pix {
-      display: none;
-      margin-top: 20px;
-      text-align: center;
-    }
-    .pix img {
-      margin-top: 10px;
-      border-radius: 8px;
-      background: #fff;
-      padding: 10px;
-    }
-    footer {
-      text-align: center;
-      font-size: 12px;
-      margin-top: 25px;
-      opacity: 0.7;
-    }
-  </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+body{margin:0;background:#0b1220;font-family:Arial;color:#fff}
+.container{max-width:900px;margin:auto;padding:20px}
+h2,h3{text-align:center}
+.card{background:#121c2e;border-radius:12px;padding:20px;margin-bottom:20px}
+input,button{width:100%;padding:12px;border-radius:8px;border:none;margin-top:8px}
+input{background:#1c2940;color:#fff}
+button{cursor:pointer;font-weight:bold}
+.calc,.add{background:#ff8c00;color:#000}
+.remove{background:#8b1e1e;color:#fff}
+.whats{background:#2ecc71;color:#000}
+#map{height:300px;border-radius:12px;margin-top:15px}
+.resumo p{margin:6px 0}
+.pix{background:#0f2a1c;border-radius:12px;padding:15px;text-align:center}
+</style>
 </head>
 
 <body>
 <div class="container">
 
-  <div class="logo">
-    <img src="logo.png" alt="Daure Express">
-  </div>
+<h2>🚚 Daure Express</h2>
 
-  <h2>Daure Express</h2>
-  <div class="sub">Encurtando distâncias, acelerando soluções</div>
+<div class="card">
+<input id="nome" placeholder="Nome do cliente">
+</div>
 
-  <label>👤 Nome do cliente</label>
-  <input id="nome" placeholder="Ex: João Silva">
+<div class="card">
+<h3>📍 Coletas</h3>
+<div id="coletas"></div>
+<button class="add" onclick="addColeta()">➕ Adicionar coleta</button>
+</div>
 
-  <label>📱 WhatsApp do cliente</label>
-  <input id="whatsCliente" placeholder="Ex: 47999999999">
+<div class="card">
+<h3>📦 Entregas</h3>
+<div id="entregas"></div>
+<button class="add" onclick="addEntrega()">➕ Adicionar entrega</button>
+</div>
 
-  <label>📍 Local de coleta</label>
-  <input id="coleta" placeholder="Ex: Centro">
+<button class="calc" onclick="calcular()">Calcular Corrida</button>
 
-  <label>📦 Local de entrega</label>
-  <input id="entrega" placeholder="Ex: Serra Alta">
+<div id="map"></div>
 
-  <button class="btn-calcular" onclick="calcular()">Calcular Valor</button>
+<div class="card resumo" id="resumo" style="display:none">
+<h3>📊 Resumo da Corrida</h3>
+<p>📏 Distância total: <span id="dist"></span> km</p>
+<p>⏱ Tempo estimado: <span id="tempo"></span></p>
+<p>💰 Valor total: R$ <span id="total"></span></p>
+<button class="whats" onclick="enviarWhats()">Confirmar no WhatsApp</button>
+</div>
 
-  <div id="resultado"></div>
-
-  <div class="pix" id="pixBox">
-    <div>💳 Pagamento via Pix</div>
-    <img id="qrPix" width="220">
-  </div>
-
-  <button class="btn-confirmar" onclick="confirmar()">Confirmar pelo WhatsApp</button>
-
-  <footer>© Daure Express</footer>
+<div class="pix">
+<p>💳 Pagamento Pix</p>
+<p><b>danieldaure2024@gmail.com</b></p>
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=danieldaure2024@gmail.com">
+</div>
 
 </div>
 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
-/* ================= CONFIGURAÇÕES ================= */
-const telefoneDaure = "5547992925584";
-const chavePix = "SUA_CHAVE_PIX_AQUI"; // troque pela sua
-const taxaBase = 8.00;
-const valorKm = 2.50;
+let map=L.map('map',{
+  dragging:false,
+  scrollWheelZoom:false,
+  doubleClickZoom:false,
+  zoomControl:false
+}).setView([-26.2455,-49.3783],7);
 
-/* Tabela por bairros */
-const tabelaBairros = {
-  "centro": 8.50,
-  "colonial": 10.00,
-  "boehmerwald": 10.00,
-  "serra alta": 12.00,
-  "centenario": 12.00,
-  "brasilia": 12.00,
-  "alpino": 16.00,
-  "lençol": 16.00
-};
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-let valorCorrida = 0;
-
-/* ================= FUNÇÕES ================= */
-async function geocodificar(endereco) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return { lat: data[0].lat, lon: data[0].lon };
+let markers=[];
+function limparMapa(){
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
 }
 
-async function calcular() {
-  const entregaTxt = document.getElementById("entrega").value.toLowerCase();
-  const coletaTxt = document.getElementById("coleta").value;
+function addColeta(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <input placeholder="Ex: Serra Alta, São Bento do Sul - SC">
+    <button class="remove" onclick="this.parentElement.remove()">Remover coleta</button>
+  `;
+  document.getElementById("coletas").appendChild(d);
+}
 
-  if (!coletaTxt || !entregaTxt) {
-    alert("Preencha coleta e entrega");
-    return;
+function addEntrega(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <input placeholder="Ex: Centro, Rio Negrinho - SC">
+    <button class="remove" onclick="this.parentElement.remove()">Remover entrega</button>
+  `;
+  document.getElementById("entregas").appendChild(d);
+}
+
+addColeta();
+addEntrega();
+
+async function geocode(endereco){
+  const tentativas=[
+    endereco,
+    endereco.replace(/[0-9]/g,""),
+    endereco.split(",")[0],
+    endereco.split(",").slice(-2).join(","),
+    "São Bento do Sul, SC",
+    "Rio Negrinho, SC"
+  ];
+
+  for(const t of tentativas){
+    const r=await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(t)}`,
+      {headers:{'User-Agent':'DaureExpress'}}
+    );
+    const j=await r.json();
+    if(j[0]) return [+j[0].lat,+j[0].lon];
+    await new Promise(r=>setTimeout(r,700));
   }
+  throw new Error("Endereço não encontrado");
+}
 
-  /* Verifica tabela de bairros */
-  for (let bairro in tabelaBairros) {
-    if (entregaTxt.includes(bairro)) {
-      valorCorrida = tabelaBairros[bairro];
-      document.getElementById("resultado").innerHTML =
-        `💰 Valor fixo (${bairro}): R$ ${valorCorrida.toFixed(2)}`;
-      mostrarPix();
-      return;
+function distancia(a,b){
+  const R=6371;
+  const dLat=(b[0]-a[0])*Math.PI/180;
+  const dLon=(b[1]-a[1])*Math.PI/180;
+  return R*2*Math.atan2(
+    Math.sqrt(Math.sin(dLat/2)**2+
+    Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2),
+    Math.sqrt(1-Math.sin(dLat/2)**2)
+  );
+}
+
+function formatarTempo(min){
+  return min<60?`${min} min`:`${Math.floor(min/60)}h ${min%60}min`;
+}
+
+async function calcular(){
+  limparMapa();
+  try{
+    const pontos=[];
+    const listaColetas=[...document.querySelectorAll("#coletas input")];
+    const listaEntregas=[...document.querySelectorAll("#entregas input")];
+
+    for(const c of listaColetas){
+      const p=await geocode(c.value);
+      pontos.push({coord:p,texto:c.value,tipo:"coleta"});
+      markers.push(
+        L.marker(p,{icon:L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/red-dot.png"})}).addTo(map)
+      );
     }
+
+    for(const e of listaEntregas){
+      const p=await geocode(e.value);
+      pontos.push({coord:p,texto:e.value,tipo:"entrega"});
+      markers.push(
+        L.marker(p,{icon:L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"})}).addTo(map)
+      );
+    }
+
+    map.fitBounds(pontos.map(p=>p.coord));
+
+    let km=0;
+    for(let i=0;i<pontos.length-1;i++){
+      km+=distancia(pontos[i].coord,pontos[i+1].coord);
+    }
+
+    const valorKm=km>35?1.40:0.95;
+    const total=Math.max(9,km*valorKm);
+    const tempo=Math.round(km*3);
+
+    document.getElementById("dist").innerText=km.toFixed(2);
+    document.getElementById("tempo").innerText=formatarTempo(tempo);
+    document.getElementById("total").innerText=total.toFixed(2);
+    document.getElementById("resumo").style.display="block";
+
+    window.dadosWhats={
+      coletas:listaColetas.map(i=>i.value),
+      entregas:listaEntregas.map(i=>i.value),
+      km:km.toFixed(2),
+      tempo:formatarTempo(tempo),
+      total:total.toFixed(2)
+    };
+
+  }catch{
+    alert("Não foi possível localizar um dos endereços. Use bairro + cidade.");
   }
-
-  document.getElementById("resultado").innerHTML = "⏳ Calculando distância...";
-
-  const origem = await geocodificar(coletaTxt + ", São Bento do Sul");
-  const destino = await geocodificar(entregaTxt + ", São Bento do Sul");
-
-  const rotaURL =
-    `https://router.project-osrm.org/route/v1/driving/` +
-    `${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=false`;
-
-  const rota = await fetch(rotaURL);
-  const dados = await rota.json();
-
-  const km = dados.routes[0].distance / 1000;
-  valorCorrida = taxaBase + (km * valorKm);
-
-  document.getElementById("resultado").innerHTML =
-    `📏 Distância: ${km.toFixed(1)} km<br>
-     💰 Valor: R$ ${valorCorrida.toFixed(2)}`;
-
-  mostrarPix();
 }
 
-function mostrarPix() {
-  const qr = document.getElementById("qrPix");
-  qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(chavePix)}`;
-  document.getElementById("pixBox").style.display = "block";
-}
+function enviarWhats(){
+  const d=window.dadosWhats;
+  let msg=
+`🚚 *Daure Express*
+Cliente: ${document.getElementById("nome").value}
 
-function confirmar() {
-  const nome = document.getElementById("nome").value;
-  const whatsCliente = document.getElementById("whatsCliente").value;
-  const coleta = document.getElementById("coleta").value;
-  const entrega = document.getElementById("entrega").value;
+📍 *Coletas:*
+${d.coletas.map(c=>"• "+c).join("\n")}
 
-  if (!nome || !whatsCliente || !coleta || !entrega || valorCorrida === 0) {
-    alert("Preencha tudo e calcule o valor");
-    return;
-  }
+📦 *Entregas:*
+${d.entregas.map(e=>"• "+e).join("\n")}
 
-  const mensagem =
-`🚚 *NOVA CORRIDA – DAURE EXPRESS*
+📏 Distância: ${d.km} km
+⏱ Tempo: ${d.tempo}
+💰 Valor: R$ ${d.total}
 
-👤 Cliente: ${nome}
-📱 WhatsApp: ${whatsCliente}
+⚠️ *Envie o comprovante Pix do seu pedido de coleta/entrega.*`;
 
-📍 Coleta: ${coleta}
-📦 Entrega: ${entrega}
-
-💰 Valor: R$ ${valorCorrida.toFixed(2)}
-💳 Pix: ${chavePix}
-⏱ Prazo: até 45 minutos`;
-
-  const link =
-    "https://wa.me/" +
-    telefoneDaure +
-    "?text=" +
-    encodeURIComponent(mensagem);
-
-  window.open(link, "_blank");
+  window.open(`https://wa.me/5547992925584?text=${encodeURIComponent(msg)}`);
 }
 </script>
+
 </body>
 </html>
