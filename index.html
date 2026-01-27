@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Daure Express | Coleta e Entrega</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+    .container {
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .logo img {
+      max-width: 180px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .sub {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.85;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 14px;
+      margin-top: 10px;
+      display: block;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 5px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-calcular {
+      background: #111;
+      color: #fff;
+    }
+    .btn-confirmar {
+      background: #25D366;
+      color: #000;
+    }
+    #resultado {
+      margin-top: 15px;
+      font-size: 17px;
+      font-weight: bold;
+      text-align: center;
+      color: #ffd700;
+    }
+    .pix {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .pix img {
+      margin-top: 10px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+    }
+    footer {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 25px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="logo">
+    <img src="logo.png" alt="Daure Express">
+  </div>
+
+  <h2>Daure Express</h2>
+  <div class="sub">Encurtando distâncias, acelerando soluções</div>
+
+  <label>👤 Nome do cliente</label>
+  <input id="nome" placeholder="Ex: João Silva">
+
+  <label>📱 WhatsApp do cliente</label>
+  <input id="whatsCliente" placeholder="Ex: 47999999999">
+
+  <label>📍 Local de coleta</label>
+  <input id="coleta" placeholder="Ex: Centro">
+
+  <label>📦 Local de entrega</label>
+  <input id="entrega" placeholder="Ex: Serra Alta">
+
+  <button class="btn-calcular" onclick="calcular()">Calcular Valor</button>
+
+  <div id="resultado"></div>
+
+  <div class="pix" id="pixBox">
+    <div>💳 Pagamento via Pix</div>
+    <img id="qrPix" width="220">
+  </div>
+
+  <button class="btn-confirmar" onclick="confirmar()">Confirmar pelo WhatsApp</button>
+
+  <footer>© Daure Express</footer>
+
+</div>
+
+<script>
+/* ================= CONFIGURAÇÕES ================= */
+const telefoneDaure = "5547992925584";
+const chavePix = "SUA_CHAVE_PIX_AQUI"; // troque pela sua
+const taxaBase = 8.00;
+const valorKm = 2.50;
+
+/* Tabela por bairros */
+const tabelaBairros = {
+  "centro": 8.50,
+  "colonial": 10.00,
+  "boehmerwald": 10.00,
+  "serra alta": 12.00,
+  "centenario": 12.00,
+  "brasilia": 12.00,
+  "alpino": 16.00,
+  "lençol": 16.00
+};
+
+let valorCorrida = 0;
+
+/* ================= FUNÇÕES ================= */
+async function geocodificar(endereco) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return { lat: data[0].lat, lon: data[0].lon };
+}
+
+async function calcular() {
+  const entregaTxt = document.getElementById("entrega").value.toLowerCase();
+  const coletaTxt = document.getElementById("coleta").value;
+
+  if (!coletaTxt || !entregaTxt) {
+    alert("Preencha coleta e entrega");
+    return;
+  }
+
+  /* Verifica tabela de bairros */
+  for (let bairro in tabelaBairros) {
+    if (entregaTxt.includes(bairro)) {
+      valorCorrida = tabelaBairros[bairro];
+      document.getElementById("resultado").innerHTML =
+        `💰 Valor fixo (${bairro}): R$ ${valorCorrida.toFixed(2)}`;
+      mostrarPix();
+      return;
+    }
+  }
+
+  document.getElementById("resultado").innerHTML = "⏳ Calculando distância...";
+
+  const origem = await geocodificar(coletaTxt + ", São Bento do Sul");
+  const destino = await geocodificar(entregaTxt + ", São Bento do Sul");
+
+  const rotaURL =
+    `https://router.project-osrm.org/route/v1/driving/` +
+    `${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=false`;
+
+  const rota = await fetch(rotaURL);
+  const dados = await rota.json();
+
+  const km = dados.routes[0].distance / 1000;
+  valorCorrida = taxaBase + (km * valorKm);
+
+  document.getElementById("resultado").innerHTML =
+    `📏 Distância: ${km.toFixed(1)} km<br>
+     💰 Valor: R$ ${valorCorrida.toFixed(2)}`;
+
+  mostrarPix();
+}
+
+function mostrarPix() {
+  const qr = document.getElementById("qrPix");
+  qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(chavePix)}`;
+  document.getElementById("pixBox").style.display = "block";
+}
+
+function confirmar() {
+  const nome = document.getElementById("nome").value;
+  const whatsCliente = document.getElementById("whatsCliente").value;
+  const coleta = document.getElementById("coleta").value;
+  const entrega = document.getElementById("entrega").value;
+
+  if (!nome || !whatsCliente || !coleta || !entrega || valorCorrida === 0) {
+    alert("Preencha tudo e calcule o valor");
+    return;
+  }
+
+  const mensagem =
+`🚚 *NOVA CORRIDA – DAURE EXPRESS*
+
+👤 Cliente: ${nome}
+📱 WhatsApp: ${whatsCliente}
+
+📍 Coleta: ${coleta}
+📦 Entrega: ${entrega}
+
+💰 Valor: R$ ${valorCorrida.toFixed(2)}
+💳 Pix: ${chavePix}
+⏱ Prazo: até 45 minutos`;
+
+  const link =
+    "https://wa.me/" +
+    telefoneDaure +
+    "?text=" +
+    encodeURIComponent(mensagem);
+
+  window.open(link, "_blank");
+}
+</script>
+</body>
+</html>
